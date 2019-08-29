@@ -1,8 +1,11 @@
+# TODO rename this file
 # Playing the sound
 import threading
 import pyaudio
 import wave
 # Plotting the data
+import matplotlib
+matplotlib.use('qt5Agg')
 import matplotlib.pyplot as plt
 from scipy.io import wavfile as wf
 from math import floor
@@ -18,7 +21,7 @@ class SoundRecord:
     def __init__(self, filename):
         extension = filename.split(".")[-1]
         if extension not in SoundRecord.__supportedExtensions:
-            raise ValueError("Type " + extension + " is not supported")
+            raise TypeError("Type " + extension + " is not supported")
         self.filename = filename
         self.extension = extension
         self.waveformFilename = None
@@ -43,18 +46,24 @@ class SoundRecord:
         self.duration = self.wavfile.getnframes() / self.wavfile.getframerate()
 
     def __getWaveFormWidth(self):
-        dotsPerSecond = 50
+        dotsPerSecond = 200
         width = floor(self.duration) * dotsPerSecond
         if width > SoundRecord.maxWaveformWidth:
             width = SoundRecord.maxWaveformWidth / floor
+            print("width = ", width)
         return width
 
-    def getWaveformPicture(self, width=None, height=150, dpi=1, deleteOnExit=False):
+    def getWaveformPicture(self, width=None, height=148, dpi=2, deleteOnExit=True):
         self.__deletePictureOnExit = deleteOnExit
         green = "#5eff00"
         black = "#000000"
         _, scipyData = wf.read(self.filename)
-        plt.plot(scipyData, color=green)
+        matplotlib.rcParams["figure.dpi"] = dpi
+        # import random
+        # color = random.choice(['g', 'r', 'y', 'b', 'c', 'm'])
+        color = green
+        plt.plot(scipyData, color=color)
+        # plt.plot(scipyData, color=green)
         plt.axis('off')
         plt.subplots_adjust(0, 0, 1, 1, 0, 0)
         plt.margins(0, 0)
@@ -63,9 +72,11 @@ class SoundRecord:
             width = self.__getWaveFormWidth()
         width /= dpi
         height /= dpi
+        fig.set_dpi(dpi)
         fig.set_size_inches(width, height)
         self.waveformFilename = self.filename.split(".")[0] + ".png"
         fig.savefig(fname=self.waveformFilename, dpi=dpi, facecolor=black)
+        plt.clf()
         return self.waveformFilename
 
     class StreamThread(threading.Thread):
@@ -81,6 +92,7 @@ class SoundRecord:
             self.data = data
             self.needToStop = False
             self.stream.start_stream()
+            print("StreamThread initialized...")
 
         def run(self):
             n = len(self.data)
@@ -88,13 +100,17 @@ class SoundRecord:
             while i < n and not self.needToStop:
                 self.stream.write(self.data[i:i + self.frameSize])
                 i += self.frameSize
+                print("\r{}/{}".format(i, n), end='')
+            print()
 
             self.stream.stop_stream()
             self.stream.close()
             self.p.terminate()
+            print("StreamThread terminated...")
 
         def stop(self):
             self.needToStop = True
+            print("StreamThread stopped...")
 
     def play(self, start=0, end=None):
         if start < 0 or start > self.duration:
@@ -103,6 +119,7 @@ class SoundRecord:
             self.stop()
         if not end or end > self.duration:
             end = self.duration
+        print("playing... ({}:{})".format(start, end))
         length = end - start
         self.wavfile.setpos(int(start * self.frameRate))
         data = self.wavfile.readframes(int(length * self.frameRate))
@@ -122,7 +139,8 @@ class SoundRecord:
 
 
 if __name__ == '__main__':
-    fname = 'test.wav'
-    rec = SoundRecord('test.wav')
-    rec.getWaveformPicture()
-    rec.play(-1, 15)
+    # fname = 'test.wav'
+    fname = 'speech.wav'
+    rec = SoundRecord(fname)
+    # rec.getWaveformPicture()
+    rec.play(4, 10)
