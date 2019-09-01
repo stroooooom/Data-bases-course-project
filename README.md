@@ -1,2 +1,2 @@
 # Data-bases-course-project
-Computer graphics course project (2019)
+Data bases course project (2019)
