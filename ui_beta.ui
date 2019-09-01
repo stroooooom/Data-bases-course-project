@@ -29,7 +29,7 @@
       <x>0</x>
       <y>90</y>
       <width>781</width>
-      <height>541</height>
+      <height>591</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -288,7 +288,7 @@
       </widget>
      </widget>
     </widget>
-    <widget class="QFrame" name="frame_3">
+    <widget class="QFrame" name="speakerData">
      <property name="geometry">
       <rect>
        <x>400</x>
@@ -629,7 +629,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QFrame" name="frame_2">
+    <widget class="QFrame" name="phonemeData">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -811,6 +811,54 @@
        </rect>
       </property>
      </widget>
+     <widget class="QLabel" name="ldialect">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>190</y>
+        <width>101</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Диалект</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="dialect">
+      <property name="geometry">
+       <rect>
+        <x>120</x>
+        <y>190</y>
+        <width>113</width>
+        <height>21</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QPushButton" name="loadDataButton">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>540</y>
+       <width>281</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>281</width>
+       <height>41</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>281</width>
+       <height>41</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Загрузить данные</string>
+     </property>
     </widget>
    </widget>
    <widget class="QFrame" name="fileSubwindow">
@@ -866,7 +914,13 @@
      <property name="minimumSize">
       <size>
        <width>281</width>
-       <height>0</height>
+       <height>41</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>281</width>
+       <height>41</height>
       </size>
      </property>
      <property name="text">

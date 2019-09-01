@@ -1,10 +1,7 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QDateTime, QTime
-from PyQt5.QtGui import QPainter
-from PyQt5.QtWidgets import QFileDialog, QScrollBar
+from PyQt5.QtCore import Qt, QTime
+from PyQt5.QtWidgets import QFileDialog
 
-# from PyQt5.QtCore.QMetaType import QString
-# import time
 from WaveGraph import SoundRecord
 
 '''
@@ -18,18 +15,24 @@ palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
 # TODO: Заменить принты всплывающим окном с предупреждением/cообщением об ошибке
 # TODO: Клиентская часть должна проверять валидность введенной информации (которая затем будет в запросе)
 
+# TODO: DisordersList - добавление и удаление
+
 # Импортируем форму
 from ui_beta import Ui_MainWindow
 import sys
-from Graph import Entity
+from GraphAPI import Entity, Graph
 from AudioWidget import AudioWidget
 
 
 class MyWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(MyWindow, self).__init__()
-        self.speechRecord = None
+        self.__graph = Graph.Driver()
+        self.__speechRecord = None
         self.__recordDuration = None
+        self.__speakerData = None
+        self.__phonemes = list()
+
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.audioScrollArea.setWidget(self.ui.audioWidget)
@@ -43,23 +46,32 @@ class MyWindow(QtWidgets.QMainWindow):
         self.ui.disordersCheckBox.stateChanged.connect(self.checkDisordersSettings)
         self.ui.audioWidget.intervalSelectedSignal.connect(self.setSelection)
         self.ui.audioWidget.resetSelectionSignal.connect(self.resetSelection)
-        self.ui.saveButton.clicked.connect(self.getSpeakerSettings)
-        self.ui.saveButton.clicked.connect(self.disableSpeakerSettings)
-        self.ui.changeButton.clicked.connect(self.enableSpeakerSettings)
+        self.ui.timeStart.timeChanged.connect(self.changedTimeStart)
+        self.ui.timeEnd.userTimeChanged.connect(self.changedTimeEnd)
+
         self.ui.loadFileButton.clicked.connect(self.loadFile)
+
         self.ui.zoomInButton.clicked.connect(self.zoomIn)
         self.ui.zoomOutButton.clicked.connect(self.zoomOut)
         self.ui.playButton.clicked.connect(self.playAudio)
         self.ui.stopButton.clicked.connect(self.stopAudio)
-        self.ui.timeStart.timeChanged.connect(self.changedTimeStart)
-        self.ui.timeEnd.userTimeChanged.connect(self.changedTimeEnd)
+
+        self.ui.addPhonemeButton.clicked.connect(self.addPhoneme)
+
+        # self.ui.saveButton.clicked.connect(self.getSpeakerSettings)
+        self.ui.saveButton.clicked.connect(self.savePerson)
+        self.ui.saveButton.clicked.connect(self.disableSpeakerSettings)
+        self.ui.changeButton.clicked.connect(self.enableSpeakerSettings)
+
+        self.ui.loadDataButton.clicked.connect(self.loadData)
 
     def checkDisordersSettings(self):
         checked = self.ui.disordersCheckBox.isChecked()
-        if checked:
-            self.ui.disordersSettings.setDisabled(False)
-        else:
-            self.ui.disordersSettings.setDisabled(True)
+        self.ui.disordersSettings.setDisabled(not checked)
+        # if checked:
+        #     self.ui.disordersSettings.setDisabled(False)
+        # else:
+        #     self.ui.disordersSettings.setDisabled(True)
 
     def disableSpeakerSettings(self):
         self.ui.tabWidget.setDisabled(True)
@@ -128,43 +140,42 @@ class MyWindow(QtWidgets.QMainWindow):
             self.resetSelection()
             for widget in self.ui.soundSubwindow.children():
                 widget.blockSignals(False)
+            self.__graph.loadQuery.setRecord(filename)
+
+    def __setTimeStart(self, time: QTime):  # blocks signals of the widget
+        self.ui.timeStart.blockSignals(True)
+        self.ui.timeStart.setTime(time)
+        self.ui.timeStart.blockSignals(False)
+
+    def __setTimeEnd(self, time: QTime):  # blocks signals of the widget
+        self.ui.timeEnd.blockSignals(True)
+        self.ui.timeEnd.setTime(time)
+        self.ui.timeEnd.blockSignals(False)
 
     def setSelection(self, timeInterval):
-        print("setSelection called")
-        self.ui.timeStart.blockSignals(True)
-        self.ui.timeEnd.blockSignals(True)
-        self.ui.timeStart.setTime(QTime.fromString(timeInterval[0]))
-        self.ui.timeEnd.setTime(QTime.fromString(timeInterval[1]))
-        self.ui.timeStart.blockSignals(False)
-        self.ui.timeEnd.blockSignals(False)
+        self.__setTimeStart(QTime.fromString(timeInterval[0]))
+        self.__setTimeEnd(QTime.fromString(timeInterval[1]))
 
     def resetSelection(self):
-        print("resetSelection called")
-        self.ui.timeStart.blockSignals(True)
-        self.ui.timeEnd.blockSignals(True)
-        self.ui.timeStart.setTime(QTime(0, 0, 0, 0))
-        self.ui.timeEnd.setTime(QTime(0, 0, 0, 0))
-        self.ui.timeStart.blockSignals(False)
-        self.ui.timeEnd.blockSignals(False)
+        self.__setTimeStart(QTime(0, 0, 0, 0))
+        self.__setTimeEnd(QTime(0, 0, 0, 0))
         self.ui.timeStart.setMinimumTime(QTime(0, 0, 0, 0))
         self.ui.timeEnd.setMinimumTime(QTime(0, 0, 0, 0))
         self.ui.timeStart.setMaximumTime(self.__recordDuration)
         self.ui.timeEnd.setMaximumTime(self.__recordDuration)
+        self.stopAudio()
 
     def changedTimeStart(self, time: QTime):
-        print("changedTimeStart called")
         timeSeconds = time.msecsSinceStartOfDay() / 1e3
         self.ui.audioWidget.changeStartPos(timeSeconds)
         self.ui.timeEnd.setMinimumTime(self.ui.timeStart.time())
 
     def changedTimeEnd(self, time: QTime):
-        print("changedTimeEnd called")
         timeSeconds = time.msecsSinceStartOfDay() / 1e3
         self.ui.audioWidget.changeEndPos(timeSeconds)
         self.ui.timeStart.setMaximumTime(self.ui.timeEnd.time())
 
     def zoomIn(self):
-        print("Zoom In")
         scrollBar = self.ui.audioScrollArea.horizontalScrollBar()
         scrollPos = scrollBar.value() / scrollBar.maximum()
         self.ui.audioWidget.zoomIn()
@@ -172,7 +183,6 @@ class MyWindow(QtWidgets.QMainWindow):
         self.ui.audioScrollArea.update()
 
     def zoomOut(self):
-        print("Zoom Out")
         scrollBar = self.ui.audioScrollArea.horizontalScrollBar()
         scrollPos = scrollBar.value() / scrollBar.maximum()
         self.ui.audioWidget.zoomOut()
@@ -180,14 +190,47 @@ class MyWindow(QtWidgets.QMainWindow):
         self.ui.audioScrollArea.update()
 
     def playAudio(self):
-        print("Play Audio")
-        start = self.ui.timeStart.time().second() + (self.ui.timeStart.time().msec()/1000)
+        start = self.ui.timeStart.time().second() + (self.ui.timeStart.time().msec() / 1000)
         end = self.ui.timeEnd.time().second() + (self.ui.timeEnd.time().msec() / 1000)
         self.speechRecord.play(start, end)
 
     def stopAudio(self):
-        print("Stop Audio")
         self.speechRecord.stop()
+
+    def getPhoneme(self) -> Entity.Phoneme:
+        return Entity.Phoneme(
+            self.ui.notation.text(),
+            self.ui.timeStart.text(),
+            self.ui.timeEnd.text(),
+            self.ui.language.text(),
+            self.ui.dialect.text())
+
+    def getPerson(self) -> Entity.Person:
+        person = Entity.Person(
+            self.ui.fullname.text(),
+            self.ui.nativelanguage.text(),
+            self.ui.city.text(),
+            self.ui.country.text(),
+            self.ui.accentCheckBox.isChecked())
+        if self.ui.disordersCheckBox.isChecked():
+            disorders = [self.ui.disordersList.item(i).text() for i in range(self.ui.disordersList.count())
+                         if self.ui.disordersList.item(i)]
+            person.setDisorders(disorders)
+        return person
+
+    def addPhoneme(self):
+        print("New phoneme was added to the list")
+        self.__phonemes.append(self.getPhoneme())
+
+    def savePerson(self):
+        self.__graph.loadQuery.person = self.getPerson()
+
+    def loadData(self):
+        print("Loading data...")
+        for phoneme in self.__phonemes:
+            self.__graph.loadQuery.addPhoneme(phoneme)
+        self.__graph.loadData()
+        print("Data was loaded into the graph database")
 
 app = QtWidgets.QApplication([])
 application = MyWindow()
