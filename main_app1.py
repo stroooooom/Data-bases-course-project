@@ -1,27 +1,13 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTime
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
-from WaveGraph import SoundRecord
-
-'''
-palette = QtGui.QPalette()
-brush = QtGui.QBrush(QtGui.QColor(33, 255, 6))
-brush.setStyle(QtCore.Qt.SolidPattern)
-palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
-'''
-
-# TODO: Добавить полосу на графе, соотвествующую текущему времени вопроизведения
-# TODO: Заменить принты всплывающим окном с предупреждением/cообщением об ошибке
-# TODO: Клиентская часть должна проверять валидность введенной информации (которая затем будет в запросе)
-
-# TODO: DisordersList - добавление и удаление
+from SoundRecord import SoundRecord
 
 # Импортируем форму
-from ui_beta import Ui_MainWindow
+from ui_app1 import Ui_MainWindow
 import sys
 from GraphAPI import Entity, Graph
-from AudioWidget import AudioWidget
 
 
 class MyWindow(QtWidgets.QMainWindow):
@@ -35,6 +21,7 @@ class MyWindow(QtWidgets.QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowTitle("Coursache")
         self.ui.audioScrollArea.setWidget(self.ui.audioWidget)
         self.checkDisordersSettings()
         self.init_connections()
@@ -42,7 +29,7 @@ class MyWindow(QtWidgets.QMainWindow):
             widget.blockSignals(True)
 
     def init_connections(self):
-        self.ui.disordersList.doubleClicked.connect(self.edition)
+        self.ui.disordersList.doubleClicked.connect(self.editItemOfDisorderList)
         self.ui.disordersCheckBox.stateChanged.connect(self.checkDisordersSettings)
         self.ui.audioWidget.intervalSelectedSignal.connect(self.setSelection)
         self.ui.audioWidget.resetSelectionSignal.connect(self.resetSelection)
@@ -58,20 +45,18 @@ class MyWindow(QtWidgets.QMainWindow):
 
         self.ui.addPhonemeButton.clicked.connect(self.addPhoneme)
 
-        # self.ui.saveButton.clicked.connect(self.getSpeakerSettings)
         self.ui.saveButton.clicked.connect(self.savePerson)
-        self.ui.saveButton.clicked.connect(self.disableSpeakerSettings)
         self.ui.changeButton.clicked.connect(self.enableSpeakerSettings)
+        self.ui.resetButton.clicked.connect(self.resetSpeakerSettings)
+
+        self.ui.addItemButton.clicked.connect(self.addItemToDisorderList)
+        self.ui.removeItemButton.clicked.connect(self.removeItemFromDisorderList)
 
         self.ui.loadDataButton.clicked.connect(self.loadData)
 
     def checkDisordersSettings(self):
         checked = self.ui.disordersCheckBox.isChecked()
         self.ui.disordersSettings.setDisabled(not checked)
-        # if checked:
-        #     self.ui.disordersSettings.setDisabled(False)
-        # else:
-        #     self.ui.disordersSettings.setDisabled(True)
 
     def disableSpeakerSettings(self):
         self.ui.tabWidget.setDisabled(True)
@@ -81,50 +66,31 @@ class MyWindow(QtWidgets.QMainWindow):
         self.ui.tabWidget.setDisabled(False)
         self.ui.tabWidget.repaint()
 
-    def edition(self):  # TODO rename
-        print("edition called")
+    def resetSpeakerSettings(self):
+        self.ui.accentCheckBox.setCheckState(Qt.Unchecked)
+        self.ui.fullname.clear()
+        self.ui.city.clear()
+        self.ui.country.clear()
+        self.ui.nativelanguage.clear()
+        for i in range(self.ui.disordersList.count() - 1, -1, -1):
+            self.ui.disordersList.takeItem(i)
+        self.ui.disordersCheckBox.setCheckState(Qt.Checked)
+
+    def addItemToDisorderList(self):
+        text, ok = QInputDialog.getText(self, None, 'Введите названия нарушения:')
+        if ok:
+            if text:
+                self.ui.disordersList.addItem(text.lower())
+                self.ui.disordersList.repaint()
+            else:
+                QMessageBox.warning(self, None, "Название не содержит символов")
+
+    def editItemOfDisorderList(self):
         self.ui.disordersList.currentItem().setFlags(Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         self.ui.disordersList.clearSelection()
 
-    def getSpeakerSettings(self):
-        fullname = self.ui.fullname.text()
-        city = self.ui.city.text()
-        country = self.ui.country.text()
-        native_language = self.ui.nativelanguage.text()
-        accent = self.ui.accentCheckBox.isChecked()
-        disorders = []
-        if self.ui.disordersCheckBox.isChecked():
-            for i in range(self.ui.disordersList.count()):
-                item = self.ui.disordersList.item(i)
-                if item:
-                    disorders.append(item)
-
-        try:
-            speaker = Entity.Person(fullname, native_language, city, country,
-                                    accent, disorders)
-        except ValueError as exception:
-            print("ValueError occurred: ", str(exception))
-        # pass
-        # вызов сообщения с предупреждением
-        else:
-            return speaker
-
-    def getPhonemeDescription(self):
-        notation = self.ui.notation.text()
-        start = self.ui.timeStart.text()
-        end = self.ui.timeEnd.text()
-        language = self.ui.language_list.currentText()
-
-        try:
-            phoneme = Entity.Phoneme(notation, start, end, language)
-        except ValueError as exception:
-            print("ValueError occurred: ", str(exception))
-        # pass
-        # ...
-        else:
-            return phoneme
-
-        return [notation, start, end, language]
+    def removeItemFromDisorderList(self):
+        self.ui.disordersList.takeItem(self.ui.disordersList.currentRow())
 
     def loadFile(self):
         filename = QFileDialog.getOpenFileName(self)[0]
@@ -132,15 +98,15 @@ class MyWindow(QtWidgets.QMainWindow):
         try:
             self.speechRecord = SoundRecord(filename)
             picture = self.speechRecord.getWaveformPicture()
-        except BaseException as tError:
-            print("Error raised: ", tError)
+        except BaseException as e:
+            msg = "Возникла ошибка при загрузке файла:\n" + str(e)
+            QMessageBox.warning(self, None, msg)
         else:
             self.ui.audioWidget.init(picture, self.speechRecord.duration)
             self.__recordDuration = QTime.fromString(self.ui.audioWidget.getDurationTime())
             self.resetSelection()
             for widget in self.ui.soundSubwindow.children():
                 widget.blockSignals(False)
-            self.__graph.loadQuery.setRecord(filename)
 
     def __setTimeStart(self, time: QTime):  # blocks signals of the widget
         self.ui.timeStart.blockSignals(True)
@@ -199,38 +165,63 @@ class MyWindow(QtWidgets.QMainWindow):
 
     def getPhoneme(self) -> Entity.Phoneme:
         return Entity.Phoneme(
-            self.ui.notation.text(),
+            self.ui.notation.text().lower(),
             self.ui.timeStart.text(),
             self.ui.timeEnd.text(),
-            self.ui.language.text(),
-            self.ui.dialect.text())
+            self.ui.language.text().lower(),
+            self.ui.dialect.text().lower())
 
     def getPerson(self) -> Entity.Person:
+        disorders = None
+        if self.ui.disordersCheckBox.isChecked():
+            disorders = [self.ui.disordersList.item(i).text().lower()
+                         for i in range(self.ui.disordersList.count())
+                         if self.ui.disordersList.item(i)]
         person = Entity.Person(
             self.ui.fullname.text(),
-            self.ui.nativelanguage.text(),
+            self.ui.nativelanguage.text().lower(),
             self.ui.city.text(),
             self.ui.country.text(),
-            self.ui.accentCheckBox.isChecked())
-        if self.ui.disordersCheckBox.isChecked():
-            disorders = [self.ui.disordersList.item(i).text() for i in range(self.ui.disordersList.count())
-                         if self.ui.disordersList.item(i)]
-            person.setDisorders(disorders)
+            self.ui.accentCheckBox.isChecked(),
+            disorders)
         return person
 
     def addPhoneme(self):
-        print("New phoneme was added to the list")
-        self.__phonemes.append(self.getPhoneme())
+        try:
+            self.__phonemes.append(self.getPhoneme())
+        except BaseException as e:
+            msg = "Возникла ошибка при добавлении фонемы:\n"+str(e)
+            QMessageBox.warning(self, None, msg)
+        else:
+            print("New phoneme '{}' was added to the list".format(self.__phonemes[-1].notation))
+            self.ui.notation.clear()
+            self.ui.notation.repaint()
 
     def savePerson(self):
-        self.__graph.loadQuery.person = self.getPerson()
+        try:
+            self.__graph.loadQuery.person = self.getPerson()
+        except BaseException as e:
+            msg = "Возникла ошибка при сохранении данных диктора:\n" + str(e)
+            QMessageBox.warning(self, None, msg)
+        else:
+            self.disableSpeakerSettings()
 
     def loadData(self):
-        print("Loading data...")
-        for phoneme in self.__phonemes:
-            self.__graph.loadQuery.addPhoneme(phoneme)
-        self.__graph.loadData()
-        print("Data was loaded into the graph database")
+        if not self.ui.currentFileName.text():
+            QMessageBox.warning(self, None, "Не указано имя файла")
+            return
+        if not self.__phonemes:
+            QMessageBox.warning(self, None, "Фонемы не добавлены")
+            return
+        self.__graph.loadQuery.setRecord(self.ui.currentFileName.text())
+        self.__graph.loadQuery.addPhonemes(self.__phonemes)
+        try:
+            self.__graph.loadData()
+        except BaseException as e:
+            msg = "Возникла ошибка при загрузке данных:\n" + str(e)
+            QMessageBox.warning(self, None, msg)
+        else:
+            QMessageBox.information(self, None, "Данные успешно загружены")
 
 app = QtWidgets.QApplication([])
 application = MyWindow()

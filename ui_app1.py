@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui_beta.ui'
+# Form implementation generated from reading ui file 'ui_app1.ui'
 #
 # Created by: PyQt5 UI code generator 5.10.1
 #
@@ -167,10 +167,6 @@ class Ui_MainWindow(object):
         self.disordersList.setMaximumSize(QtCore.QSize(16777215, 52))
         self.disordersList.setSelectionRectVisible(False)
         self.disordersList.setObjectName("disordersList")
-        item = QtWidgets.QListWidgetItem()
-        self.disordersList.addItem(item)
-        item = QtWidgets.QListWidgetItem()
-        self.disordersList.addItem(item)
         self.addItemButton = QtWidgets.QPushButton(self.disordersSettings)
         self.addItemButton.setGeometry(QtCore.QRect(0, 60, 131, 41))
         self.addItemButton.setMinimumSize(QtCore.QSize(131, 41))
@@ -295,13 +291,6 @@ class Ui_MainWindow(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Основная инормация"))
         self.accentCheckBox.setText(_translate("MainWindow", "Есть акцент"))
         self.disordersCheckBox.setText(_translate("MainWindow", "Есть дефекты речи"))
-        __sortingEnabled = self.disordersList.isSortingEnabled()
-        self.disordersList.setSortingEnabled(False)
-        item = self.disordersList.item(0)
-        item.setText(_translate("MainWindow", "1"))
-        item = self.disordersList.item(1)
-        item.setText(_translate("MainWindow", "2"))
-        self.disordersList.setSortingEnabled(__sortingEnabled)
         self.addItemButton.setText(_translate("MainWindow", "Добавить"))
         self.removeItemButton.setText(_translate("MainWindow", "Удалить"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Особенности речи"))

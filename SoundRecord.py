@@ -1,11 +1,9 @@
-# TODO rename this file
 # Playing the sound
 import threading
 import pyaudio
 import wave
 # Plotting the data
 import matplotlib
-matplotlib.use('qt5Agg')
 import matplotlib.pyplot as plt
 from scipy.io import wavfile as wf
 from math import floor
@@ -21,7 +19,7 @@ class SoundRecord:
     def __init__(self, filename):
         extension = filename.split(".")[-1]
         if extension not in SoundRecord.__supportedExtensions:
-            raise TypeError("Type " + extension + " is not supported")
+            raise TypeError("Extension .'" + extension + "' is not supported")
         self.filename = filename
         self.extension = extension
         self.waveformFilename = None
@@ -50,7 +48,6 @@ class SoundRecord:
         width = floor(self.duration) * dotsPerSecond
         if width > SoundRecord.maxWaveformWidth:
             width = SoundRecord.maxWaveformWidth / floor
-            print("width = ", width)
         return width
 
     def getWaveformPicture(self, width=None, height=148, dpi=2, deleteOnExit=True):
@@ -59,11 +56,8 @@ class SoundRecord:
         black = "#000000"
         _, scipyData = wf.read(self.filename)
         matplotlib.rcParams["figure.dpi"] = dpi
-        # import random
-        # color = random.choice(['g', 'r', 'y', 'b', 'c', 'm'])
         color = green
         plt.plot(scipyData, color=color)
-        # plt.plot(scipyData, color=green)
         plt.axis('off')
         plt.subplots_adjust(0, 0, 1, 1, 0, 0)
         plt.margins(0, 0)
@@ -90,27 +84,25 @@ class SoundRecord:
                 output=True)
             self.frameSize = sampwidth * channels
             self.data = data
-            self.needToStop = False
+            self.stopped = False
             self.stream.start_stream()
             print("StreamThread initialized...")
 
         def run(self):
             n = len(self.data)
             i = 0
-            while i < n and not self.needToStop:
+            while i < n and not self.stopped:
                 self.stream.write(self.data[i:i + self.frameSize])
                 i += self.frameSize
-                print("\r{}/{}".format(i, n), end='')
-            print()
 
+            self.stopped = True
             self.stream.stop_stream()
             self.stream.close()
             self.p.terminate()
             print("StreamThread terminated...")
 
         def stop(self):
-            self.needToStop = True
-            print("StreamThread stopped...")
+            self.stopped = True
 
     def play(self, start=0, end=None):
         if start < 0 or start > self.duration:
@@ -119,7 +111,6 @@ class SoundRecord:
             self.stop()
         if not end or end > self.duration:
             end = self.duration
-        print("playing... ({}:{})".format(start, end))
         length = end - start
         self.wavfile.setpos(int(start * self.frameRate))
         data = self.wavfile.readframes(int(length * self.frameRate))
@@ -132,6 +123,11 @@ class SoundRecord:
         self.__streamThread.stop()
         self.__streamThread.join()
 
+    def isPlaying(self) -> bool:
+        if not self.__streamThread:
+            return False
+        return not self.__streamThread.stop
+
     def __del__(self):
         if self.__streamThread:
             self.__streamThread.stop()
@@ -140,9 +136,55 @@ class SoundRecord:
         self.wavfile.close()
 
 
+class SoundCombiner:
+    def __init__(self):
+        self.__output = None
+        self.__params = None
+
+    def create(self, filename):
+        self.__output = wave.open(filename, 'wb')
+
+    def __compareParams(self, params) -> bool:
+        if self.__params is None:
+            self.__output.setparams(params)
+            self.__params = params
+            self.channels, self.sampWidth, self.frameRate,\
+            self.nframes, self.comptype, self.compname = params
+            return True
+        else:
+            return self.__params == params
+
+    def join(self, inputWavfile: wave.Wave_read, start, end):
+        length = end - start
+        if start < 0 or end < 0 or length < 0:
+            raise ValueError("Invalid start value was given")
+        params = inputWavfile.getparams()
+        if not self.__compareParams(params):
+            raise ValueError("File can not be joined due to inappropriate parameters")
+        else:
+            inputWavfile.setpos(int(start * self.frameRate))
+            data = inputWavfile.readframes(int(length * self.frameRate))
+            self.__output.writeframes(data)
+
+    def detach(self):
+        self.__output.close()
+        self.__output = None
+        self.__params = None
+
+    def __del__(self):
+        if self.__output:
+            self.__output.close()
+
+
 if __name__ == '__main__':
-    # fname = 'test.wav'
     fname = 'speech.wav'
     rec = SoundRecord(fname)
-    # rec.getWaveformPicture()
+    rec.getWaveformPicture()
     rec.play(4, 10)
+    comb = SoundCombiner()
+    comb.create('combTest.wav')
+    comb.join(rec.wavfile, 0.941, 1.082)
+    comb.join(rec.wavfile, 0.722, 0.873)
+    comb.join(rec.wavfile, 2.349, 2.431)
+    comb.detach()
+

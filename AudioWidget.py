@@ -30,17 +30,11 @@ class AudioWidget(QWidget):
             self.init(waveformFileName, duration)
 
     def __getChangingSelectionPos(self, curx):
-        # print(":: __getChangingSelectionPos\n",
-        #       "Diff with pos1 / pos2: ",
-        #       abs(curx - self.__startPos), " / ", abs(curx - self.__endPos))
         if abs(curx - self.__startPos) < 4:
             self.__changingSelectPos = AudioWidget.__ChangingLeftSelectPos
-            # print("> _changingLeftSelectPos: ", abs(curx - self.__startPos))
         elif abs(curx - self.__endPos) < 4:
             self.__changingSelectPos = AudioWidget.__ChangingRightSelectPos
-            # print("> _changingRightSelectPos: ", abs(curx - self.__endPos))
         else:
-            # print("> __notChangingSelectPos")
             self.__changingSelectPos = AudioWidget.__NotChangingSelectPos
             if curx < self.__startPos or curx > self.__endPos:
                 self.resetSelection()
@@ -52,7 +46,6 @@ class AudioWidget(QWidget):
     def __drawOverlay(self, start, end):
         if start == end:
             return
-        # print(":: __drawOverlay")
         overlay = QPixmap(end - start, self.__curimage.height())
         overlay.fill(QColor(255, 255, 0, 50))
 
@@ -77,13 +70,12 @@ class AudioWidget(QWidget):
         image = image.scaled(width, self.__curimage.height(), Qt.IgnoreAspectRatio)
         self.__curimage = image
         self.setFixedSize(image.size())
-        print("pos: ", self.__startPos, self.__endPos)
         if self.intervalSelected:
             self.__drawOverlay(self.__startPos, self.__endPos)
         else:
             self.repaint()
 
-    def __getTimeFromPos(self, xpos):  # TODO: отслеживать длительность дорожки выше в классе ?
+    def __getTimeFromPos(self, xpos):
         t = xpos / self.__curimage.width() * self.duration
         if t > 86400:
             raise ValueError("Time value is too big")
@@ -126,7 +118,6 @@ class AudioWidget(QWidget):
             self.selectInterval()
 
     def setSelectionPos(self, xpos):
-        # print(":: setSelectionPoint")
         if self.__startPos is None:
             self.__startPos = xpos
             if self.__endPos is None:
@@ -151,7 +142,6 @@ class AudioWidget(QWidget):
                                     self.__endPos / self.__scaleRatio)
         self.intervalSelected = True
         self.__drawOverlay(self.__startPos, self.__endPos)
-        # print("start/end poss: ", self.__startPos, " / ", self.__endPos)
         self.intervalSelectedSignal.emit(self.getTimeInterval())
 
     def resetSelection(self):
@@ -186,38 +176,27 @@ class AudioWidget(QWidget):
             painter.drawPixmap(0, 0, self.__curimage)
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
-        # print("\n\n:: mousePressEvent!")
-        # print("> intervalSelected: ", self.intervalSelected)
         if not self.intervalSelected:
-            # print("> calling setSelectionPoint")
             self.setSelectionPos(a0.localPos().x())
         else:
-            # print("> calling __getChangingSelectionPos")
             self.__getChangingSelectionPos(a0.localPos().x())
 
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
-        # print("\n\n:: mouseMoveEvent!")
         if self.__changingSelectPos == AudioWidget.__NotChangingSelectPos:
             return
 
-        # print("> changing select pos")
         if self.__changingSelectPos == AudioWidget.__ChangingLeftSelectPos:
             self.__startPos = None
-            # print(">> leftSelectPos reset")
         else:
             self.__endPos = None
-            # print(">> rightSelectPos reset")
 
         self.__curimage = QPixmap(self.__previmage)
         self.setSelectionPos(a0.localPos().x())
 
     def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
-        # print("\n\n:: keyPressEvent!")
         if a0.key() == Qt.Key_D:
-            # print("> ZoomIn")
             self.__resizeImage(AudioWidget.ZoomIn)
         elif a0.key() == Qt.Key_A:
-            # print("> ZoomOut")
             self.__resizeImage(AudioWidget.ZoomOut)
 
 
