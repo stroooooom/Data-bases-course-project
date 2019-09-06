@@ -73,6 +73,7 @@ class MyWindow(QtWidgets.QMainWindow):
         for i in range(self.ui.disordersList.count() - 1, -1, -1):
             self.ui.disordersList.takeItem(i)
         self.ui.disordersCheckBox.setCheckState(Qt.Checked)
+        self.enableSpeakerSettings()
 
     def addItemToDisorderList(self):
         text, ok = QInputDialog.getText(self, None, 'Введите названия нарушения:')
