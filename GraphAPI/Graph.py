@@ -47,17 +47,7 @@ class GetDataQuery:
                 letter=self.letters[i])
             returnQueryPart += "{letterName}.start, {letterName}.end, ".format(letterName=letterName)
         self.__text += "return " + returnQueryPart + "p.fullname, r.description"
-        print("query text:")
-        print(self.__text)
         return self.__text
-
-    def test_text(self):
-        self.letters = ['a', 'b']
-        return "match (p:Person)-[*2]-(ph0:Phoneme {notation:'а'})\n" \
-               "match (p:Person)-[*2]-(ph1:Phoneme {notation:'б'})\n" \
-               "return p.fullname, " \
-               "ph0.start, ph0.end, " \
-               "ph1.start, ph1.end"
 
 
 class LoadDataQuery:
@@ -77,8 +67,8 @@ class LoadDataQuery:
     def addPhonemes(self, phonemes: list):
         self.phonemes = phonemes
 
-    def addPhoneme(self, phoneme: Entity.Phoneme): # ??
-        self.phonemes.append(phoneme)
+    # def addPhoneme(self, phoneme: Entity.Phoneme):
+    #     self.phonemes.append(phoneme)
 
     def reset(self):
         self.person = None
@@ -122,8 +112,6 @@ class LoadDataQuery:
         return self.__text
 
 
-# логику работы UI лучше вынести в отдельный класс
-# нужно сохранять Speaker ID, чтобы не искать каждый раз при добавлении фонемы 
 class Driver:
     def __init__(self):
         self.driver = None
@@ -151,9 +139,7 @@ class Driver:
             return session.read_transaction(self.__getPhonemes)
 
     def __getPhonemes(self, tx):
-        # result = tx.run(self.getQuery.test_text()).records()
         speechSamples = list()
-        # records = tx.run(self.getQuery.test_text()).records()
         records = tx.run(self.getQuery.text()).records()
         for record in records:
             d = dict()
@@ -166,7 +152,6 @@ class Driver:
                 d[self.getQuery.letters[i]] = time
             speechSamples.append(d)
 
-        # return result
         return speechSamples
 
     def __del__(self):
@@ -187,12 +172,4 @@ if __name__ == '__main__':
     result = graph.getData()
     for d in result:
         print(d)
-    # for record in result:
-    #     print(record)
-    # print(result[0]['ph0'])
-    # records = result.records()
-    # for record in records:
-    #     print(record['ph0.start'])
-        # print("Record:\n", record.data())
-    # print(result.records())
     graph.driver.close()

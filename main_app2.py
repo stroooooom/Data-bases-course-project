@@ -31,7 +31,6 @@ class MyWindow(QtWidgets.QMainWindow):
         if self.__currentRecord and self.__currentRecord.isPlaying():
             self.__currentRecord.stop()
         id = self.ui.soundList.currentRow()
-        print(id)
         self.__currentRecord = self.__soundRecords[id]
         self.__currentRecord.play()
 
@@ -71,12 +70,13 @@ class MyWindow(QtWidgets.QMainWindow):
             item = self.ui.soundList.takeItem(i).text()
             os.remove(item)
 
-    def __del__(self):
+    def close(self):
         self.__deleteFiles()
 
 
 app = QtWidgets.QApplication([])
 application = MyWindow()
 application.show()
+app.aboutToQuit.connect(application.close)
 
 sys.exit(app.exec())

@@ -1,13 +1,11 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTime
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
-
-from SoundRecord import SoundRecord
-
-# Импортируем форму
 from ui_app1 import Ui_MainWindow
 import sys
+
 from GraphAPI import Entity, Graph
+from SoundRecord import SoundRecord
 
 
 class MyWindow(QtWidgets.QMainWindow):
@@ -222,6 +220,7 @@ class MyWindow(QtWidgets.QMainWindow):
             QMessageBox.warning(self, None, msg)
         else:
             QMessageBox.information(self, None, "Данные успешно загружены")
+
 
 app = QtWidgets.QApplication([])
 application = MyWindow()
