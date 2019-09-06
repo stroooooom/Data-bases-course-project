@@ -31,6 +31,8 @@ class MyWindow(QtWidgets.QMainWindow):
         if self.__currentRecord and self.__currentRecord.isPlaying():
             self.__currentRecord.stop()
         id = self.ui.soundList.currentRow()
+        if id == -1:  # not chosen
+            return
         self.__currentRecord = self.__soundRecords[id]
         self.__currentRecord.play()
 
