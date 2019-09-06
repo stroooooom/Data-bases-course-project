@@ -17,15 +17,15 @@ class SoundRecord:
     __supportedExtensions = ['wav']
 
     def __init__(self, filename):
+        self.extension = filename.split(".")[-1]
+        if self.extension not in SoundRecord.__supportedExtensions:
+            raise TypeError("Extension .'" + self.extension + "' is not supported")
         self.__streamThread = None
         self.__deletePictureOnExit = False
 
         self.filename = filename
         self.waveformFilename = None
         self.duration = None
-        self.extension = filename.split(".")[-1]
-        if self.extension not in SoundRecord.__supportedExtensions:
-            raise TypeError("Extension .'" + self.extension + "' is not supported")
 
         def handleSignal(signum, frame):
             self.stop()
@@ -129,9 +129,9 @@ class SoundRecord:
         return not self.__streamThread.stop
 
     def __del__(self):
-        if self.__streamThread:
+        if hasattr(self, "__streamThread"):
             self.__streamThread.stop()
-        if self.__deletePictureOnExit:
+        if hasattr(self, "__deletePictureOnExit") and self.__deletePictureOnExit:
             os.remove(self.waveformFilename)
         self.wavfile.close()
 
