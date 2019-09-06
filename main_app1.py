@@ -93,7 +93,6 @@ class MyWindow(QtWidgets.QMainWindow):
 
     def loadFile(self):
         filename = QFileDialog.getOpenFileName(self)[0]
-        self.ui.currentFileName.setText(filename)
         try:
             self.speechRecord = SoundRecord(filename)
             picture = self.speechRecord.getWaveformPicture()
@@ -101,6 +100,7 @@ class MyWindow(QtWidgets.QMainWindow):
             msg = "Возникла ошибка при загрузке файла:\n" + str(e)
             QMessageBox.warning(self, None, msg)
         else:
+            self.ui.currentFileName.setText(filename)
             self.ui.audioWidget.init(picture, self.speechRecord.duration)
             self.__recordDuration = QTime.fromString(self.ui.audioWidget.getDurationTime())
             self.resetSelection()
